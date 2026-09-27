@@ -464,7 +464,9 @@ Issue / PR 欢迎。改 `scripts/` 或 `docker/` 请先跑 `python3 scripts/benc
 - **宿主直跑线**：稳定——bench 8/8 回归、13 项性能全量通过（稳定 20/20）。
 - **容器线**：已验证——vendor 源码容器内编译出镜像，双入口冒烟 83.8 / 85.2 tok/s，
   与宿主直跑持平（2026-09-27）。
-- **发布**：`v1.0.0` 已发布（GitHub Release + GHCR 镜像 cuda13.3-arch89 / v1.0.0 / latest）。
+- **发布**：`v2.0.0` 已发布（A3 引擎世代；GitHub Release 谷歌风格模板 + GHCR 镜像
+  cuda13.3-arch89 / v2.0.0 / latest，CI 双架构 89/120a 实测通过）。
+- **魔搭镜像**：https://modelscope.cn/models/xiuming/ninfer-bonsai-4070ti （含 7.8GB 制品，国内直连）。
 - **已知限制**：MTP 接受率与官方口径有差距（未开源的 3KB 草稿策略）；
   大海捞针测试脚本需关思考运行；12GB 卡上下文上限 112K。
 - 交付形态：OpenAI 兼容 HTTP 服务，compose 一键管理。
