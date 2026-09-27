@@ -1,0 +1,16 @@
+# 制品与权重（体积大，且许可随上游——自行获取）
+*.ninfer
+*.gguf
+*.safetensors
+
+# 编译产物
+build/
+tmp-nvcc/
+*.o
+*.a
+
+# 运行产物
+perf-results-*.json
+suite-results-*.json
+*.log
+*.pid
