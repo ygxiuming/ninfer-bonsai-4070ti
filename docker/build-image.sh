@@ -16,17 +16,18 @@ set -euo pipefail
 
 # 默认路径相对本仓库推导（../sanyuan/），可用环境变量 NINFER_ENGINE 或 -e 覆盖
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ENG="${NINFER_ENGINE:-$REPO_ROOT/vendor/ninfer-4090w-ternary}"
+ENG="${NINFER_ENGINE:-$REPO_ROOT/vendor/ninfer-4090w-ternary-a3}"
 ARCH="89"
-BASE="nvidia/cuda:13.3.0"
+SM="0"          # NINFER_SM_COUNT；0=引擎按架构默认（89→128/120a→170）。4070 Ti 用 -s 60
 TAG=""
 MIRROR="1"
-while getopts "e:t:a:b:m:" o; do case "$o" in
+while getopts "e:t:a:b:m:s:" o; do case "$o" in
     e) ENG="$OPTARG" ;;
     t) TAG="$OPTARG" ;;
     a) ARCH="$OPTARG" ;;
     b) BASE="$OPTARG" ;;
     m) MIRROR="$OPTARG" ;;
+    s) SM="$OPTARG" ;;
     *) grep '^#' "$0" | sed -n '2,14p'; exit 1 ;;
 esac; done
 
@@ -53,6 +54,7 @@ $DOCKER build \
     --build-arg CUDA_BASE="$BASE" \
     --build-arg CUDA_ARCH="$ARCH" \
     --build-arg NINFER_JOBS="${NINFER_JOBS:-6}" \
+    --build-arg NINFER_SM_COUNT="$SM" \
     --build-arg USE_MIRROR="$MIRROR" \
     -t "$TAG" \
     "$CTX"

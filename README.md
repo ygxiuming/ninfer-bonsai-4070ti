@@ -65,10 +65,10 @@ Bonsai-2-27B 三元权重（GGUF，6.7 GB，值域 {-1,0,+1}，2.125 bpw）
 
 | 指标 | 数值 | 备注 |
 |---|---|---|
-| 持续解码 | **76~84 tok/s** | 512 tok 生成；MTP K=3 最优（接受率 36~52%，强依赖任务） |
+| 持续解码 | **75~84 tok/s**（说明文/对话） | A3 引擎；接受率强依赖任务：数数/照抄类 88~99%，K=3 实测 **145 tok/s**、K=5 **173 tok/s** |
 | 短输出爆发 | 92~106 tok/s | 64~1024 tok 输出实测 |
-| **prefill 吞吐** | **1700~1840 tok/s** | 1k→32k 提示几乎不衰减 |
-| TTFT（短提示） | **81~190 ms** | 服务端口径 |
+| **prefill 吞吐** | **2108~2209 tok/s** | A3 引擎（旧版 1694~1837，+24.6%，pkg5 口径 A/B + sha 逐位门） |
+| TTFT（短提示） | **81~179 ms** | A3 引擎 179ms |
 | TTFT（32k 文档） | ~12.7 s | 一次性读取 |
 | 32k 上下文解码 | 83.9 tok/s | 对比空上下文几乎无衰减 |
 | **容器化冒烟** | **85.2 tok/s / TTFT 66ms** | vendor 源码容器内编译，与宿主直跑持平 |
@@ -77,6 +77,12 @@ Bonsai-2-27B 三元权重（GGUF，6.7 GB，值域 {-1,0,+1}，2.125 bpw）
 | 贪心确定性 | ✅ | 同 prompt 两次输出逐字一致 |
 | 并发聚合吞吐 | 169 / 336 tok/s @2/4 路 | 单路下降但聚合线性 |
 | 稳定性 | 20/20 | 连发零错误 |
+
+**A3 引擎更新（2026-09-27 深夜，pkg2 r12 树 + P1/P2/A3 补丁 + SM_COUNT 参数化）**：prefill +24.6%、
+**前缀复用恢复**（r12 修复账本 bug，`--no-prefix-reuse` 不再需要）、A3 收益开关
+`NINFER_TERNARY_TOKEN_GRID` 默认开（逐位无损已验证，须配 `NINFER_TERNARY_SMALL_T_ROWS=16`
+钉行宽绕开上游 32 行档 PPL 缺陷）；decode 高可预测任务 145~173 tok/s。回滚：换用
+`vendor/ninfer-4090w-ternary`（旧树，随仓库保留）并加回 `--no-prefix-reuse`。
 
 **官方对照（RTX 4080 SUPER，32GB）**：decode **226 tok/s**（贪心，16k ctx，
 MTP 接受率 81.75%）、**262K 上下文**、prefill 2230 tok/s、运行时 8.54 GiB。
@@ -349,7 +355,7 @@ python3 scripts/suite_ninfer.py         # 深度套件：K 矩阵/投机一致�
 
 | # | 症状 | 真因 / 处方 |
 |---|---|---|
-| 1 | 第二个请求 HTTP 500，`candidate token ledger does not match prompt length` | **前缀复用与草稿账本冲突（上游 bug）** ⇒ 服务端必加 `--no-prefix-reuse` |
+| 1 | 第二个请求 HTTP 500，`candidate token ledger does not match prompt length` | **前缀复用与草稿账本冲突（上游 bug）** ⇒ 旧树加 `--no-prefix-reuse`；**A3/r12 树已修复**，前缀复用默认开 |
 | 2 | 400 `reasoning effort 'high' is not supported` | 模板只认 low/medium/xhigh ⇒ `patches/apply-compat.sh`（P1 别名补丁：high/max→xhigh）；或客户端改发 medium |
 | 3 | 转换时 CUDA OOM（Tried to allocate 4.74 GiB） | 12GB 卡跑不下 GPU 量化 ⇒ `--device cpu`（实测仅 131s） |
 | 4 | 转换中途被 OOM-kill | 32GB 内存不够 ⇒ 64GB swap |
@@ -399,6 +405,8 @@ llama.cpp 线（SM 75~120a）。
 
 - [x] 容器化部署（容器内编译 + 国内源 + GPU 架构参数化）
 - [x] 云端自动打包（GitHub Actions → GHCR）与 Release 自动发布（v* 标签→谷歌风格模板）
+- [x] A3 引擎升级（r12 树：前缀复用修复 + prefill +24.6% + token grid 收益开关）
+- [x] RTX 50 系（120a）恢复：A3 树 device.h 已含 SM120 分支（CI 双架构构建）
 - [ ] 官方 20 基准完整复测（对照 98.2% 保留口径，需从白皮书/eval 配置搭基准集）
 - [ ] 大海捞针真实矩阵复测（根因已定位：测试脚本没关思考；关思考后 8k/32k 矩阵待跑）
 - [ ] decode 追平官方 226 t/s 口径（差在官方二进制未开源的 3KB 草稿策略，等新源码）

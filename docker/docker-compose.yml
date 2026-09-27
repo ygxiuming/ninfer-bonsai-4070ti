@@ -13,7 +13,7 @@ name: ninfer
 
 services:
   ninfer-serve:
-    # ---- 镜像（build-image.sh 的产物；vendor 源码当前仅支持 arch89/RTX 40 系）----
+    # ---- 镜像（build-image.sh 的产物 = A3 引擎树；40 系 89 / 50 系可 -a 120a）----
     image: ninfer-bonsai:cuda13.3-arch89
     container_name: ninfer-serve
     restart: unless-stopped        # 崩溃/开机自动拉起；不想自启改为 "no"
@@ -69,12 +69,15 @@ services:
       #   K 越大接受率越低；dflash/dflash2 需制品含 DFlash2 bundle（现制品没有）
       - --draft-tokens
       - "3"
-      # ================= 已知问题规避 =================
-      # 必须保留：不加则第二个请求 500（上游 candidate token ledger bug，修复后可删）
-      - --no-prefix-reuse
       # 并发路数：1 = 交互延迟优先（官方口径每加一路单路掉 ~28%，聚合吞吐线性）
       - --max-concurrency
       - "1"
       # ================= 思考模式 =================
       # 思考默认开启；要整体关闭，把下面两行的行首 "# " 删掉即可
       # - --no-thinking
+    # ---- 环境变量 ----
+    environment:
+      # A3 数值安全：rows 钉 16（上游 sched3 auto 的 32 行档有 PTQ1_0 PPL 缺陷）
+      NINFER_TERNARY_SMALL_T_ROWS: "16"
+      # A3 收益开关 NINFER_TERNARY_TOKEN_GRID 补丁缺省已开，无需显式设置
+      # 思考模式整体关闭也可加：NINFER_THINKING: "off"

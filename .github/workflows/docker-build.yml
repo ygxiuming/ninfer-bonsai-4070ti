@@ -4,9 +4,9 @@
 #
 # 产物：ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch89 （RTX 40 系）
 #
-# ⚠ 只构建 arch89：vendor（沈三殊 Ada fork）的 src/core/device.h 仅认
-#   NINFER_SM86/NINFER_SM89，120a（RTX 50 系）会编译失败——CMakeLists 放行 120a
-#   是上游遗留。50 系需上游 Neroued 树或交付树同步上游 device.h 后再加回 matrix。
+# 2026-09-27 深夜 A3 更新：vendor 升级为 pkg2 r12 树（A3 引擎），device.h 参数化
+#   NINFER_SM_COUNT 且恢复 SM120 分支 → arch89 与 120a 均可编译（120a 由 CI 实测验证）。
+#   账本 bug 已在 r12 修复：服务不再需要 --no-prefix-reuse（旧树回滚时才要加回）。
 # =============================================================================
 name: docker-build
 
@@ -26,7 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        cuda_arch: ["89"]   # 120a 待源码支持后加入（见文件头说明）
+        cuda_arch: ["89", "120a"]   # A3 树 device.h 已含 SM120 分支，120a 恢复（CI 即验证）
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
 

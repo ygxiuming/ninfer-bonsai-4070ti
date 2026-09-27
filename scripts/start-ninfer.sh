@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# NInfer · Bonsai-2-27B 启动脚本（OpenAI 兼容接口）— v2（2026-09-27 新引擎版）
+# NInfer · Bonsai-2-27B 启动脚本（OpenAI 兼容接口）— v3（2026-09-27 深夜 A3 升级版）
 #
 # 用法:
 #   ./start-ninfer.sh [profile] [port]     启动（默认 profile=work 端口=8088）
@@ -8,17 +8,26 @@
 #   ./start-ninfer.sh status  [profile]    状态
 #
 # profile（4070 Ti 12GB + 核显显示实测调优）:
-#   work   默认。新官方引擎 + PQ2 制品，64k fp8，MTP K=3，--no-prefix-reuse。
-#          prefill 1823 t/s（旧版 +79%）、TTFT 190ms、decode ~76-84 t/s。富余 1.85GB。
+#   work   默认。A3 引擎（pkg2 r12 树+P1/P2/A3 补丁+SM_COUNT=60）+ PQ2 制品，
+#          64k fp8，MTP K=3，前缀复用开（r12 已修账本 bug）。
+#          prefill 2108-2209 t/s（旧版 1694-1837，+24.6% 经 pkg5 口径 A/B + sha 逐位门）、
+#          TTFT 179ms、decode ~75 t/s、接受率 ~35%。显存 ~10.2GB。
 #   long   同引擎 112k fp8（实测上限；131k 差 370MB，262k 需 9.2GB 放不下）。
 #   fast   同引擎 8k fp8 —— 最省显存最稳（边办公边跑）。
 #
 # 已知事项:
-#   · 新引擎必须加 --no-prefix-reuse，否则第二个请求会 500
-#     （candidate token ledger does not match prompt length —— 上游 bug，等修复）。
+#   · A3 收益开关 NINFER_TERNARY_TOKEN_GRID 默认开（pkg5 补丁，逐位无损已验证）；
+#     必须配 NINFER_TERNARY_SMALL_T_ROWS=16：sched3 缺省 auto 会走到 32 行档，
+#     该档有上游已知数值缺陷（"PTQ1_0 + 32 rows" PPL 算错）⇒ 本脚本显式钉 16。
+#   · 前缀复用已开：旧树的账本 bug（第二个请求 500 candidate token ledger…）在本树
+#     已被 pkg2 r12 修复（实测同 prompt 第二请求 200 且 prefill 86 t/s 缓存命中）。
+#   · decode 想跑 150+ t/s：取决于任务可预测性——数数/模板/照抄类任务接受率 88-99%，
+#     K=3 实测 145 t/s、K=5 实测 173 t/s；而说明文/对话类接受率仅 28-40%，K=3 ~80 t/s
+#     才是正常水平。K 是启动参数（--draft-tokens，上限 5），按任务换档需重启。
 #   · MTP 上限 K=5（内核 T≤6 硬限，源码已打 K7 补丁但内核不可越）；
 #     dflash2 需要制品含 DFlash2 bundle（现制品都没有）。
-#   · 262k fp8 需要 ~9.2GB 运行时预留，12GB 卡放不下，long 档封顶 112k。
+#   · 回滚：把 ENG_NEW 改回 $SANYUAN/ninfer-4090w-ternary 并在参数里加回 --no-prefix-reuse
+#     （旧树保留未动）。
 # =============================================================================
 set -uo pipefail
 
@@ -26,7 +35,8 @@ LOGDIR="$HOME/ninfer-logs"
 SANYUAN="$HOME/pyprojects/sanyuan"
 ART_PQ2="$SANYUAN/artifacts-pq2.ninfer"
 
-ENG_NEW="$SANYUAN/ninfer-4090w-ternary"           # 沈三殊官方线（2026-09-26 树，唯一保留）
+ENG_NEW="$SANYUAN/ninfer-4090w-ternary-a3"        # A3 引擎（pkg2 r12 树 + P1/P2/A3 + SM_COUNT=60）
+ENG_OLD="$SANYUAN/ninfer-4090w-ternary"           # 旧引擎（2026-09-26 树，回滚用，保留未动）
 
 PROFILE="${1:-work}"
 ACTION="start"
@@ -41,15 +51,18 @@ fi
 THINKING_FLAG=""
 [[ "${NINFER_THINKING:-on}" == "off" ]] && THINKING_FLAG="--no-thinking"
 
+# A3 数值安全: rows 钉 16（绕开上游 32 行档已知缺陷），token grid 保持补丁缺省开
+export NINFER_TERNARY_SMALL_T_ROWS=16
+
 PIDFILE="$LOGDIR/ninfer-$PROFILE.pid"
 LOGFILE="$LOGDIR/ninfer-$PROFILE.log"
 mkdir -p "$LOGDIR"
 
 profile_spec() {  # 输出: 引擎目录|制品|引擎参数
     case "$PROFILE" in
-        work)   echo "$ENG_NEW|$ART_PQ2|--max-context 65536 --kv-capacity 65536 --kv-dtype fp8 --spec mtp --draft-tokens 3 --no-prefix-reuse" ;;
-        long)   echo "$ENG_NEW|$ART_PQ2|--max-context 114688 --kv-capacity 114688 --kv-dtype fp8 --spec mtp --draft-tokens 3 --no-prefix-reuse" ;;
-        fast)   echo "$ENG_NEW|$ART_PQ2|--max-context 8192 --kv-capacity 8192 --kv-dtype fp8 --spec mtp --draft-tokens 3 --no-prefix-reuse" ;;
+        work)   echo "$ENG_NEW|$ART_PQ2|--max-context 65536 --kv-capacity 65536 --kv-dtype fp8 --spec mtp --draft-tokens 3" ;;
+        long)   echo "$ENG_NEW|$ART_PQ2|--max-context 114688 --kv-capacity 114688 --kv-dtype fp8 --spec mtp --draft-tokens 3" ;;
+        fast)   echo "$ENG_NEW|$ART_PQ2|--max-context 8192 --kv-capacity 8192 --kv-dtype fp8 --spec mtp --draft-tokens 3" ;;
         *)      return 1 ;;
     esac
 }

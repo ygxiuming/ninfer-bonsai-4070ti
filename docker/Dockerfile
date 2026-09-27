@@ -14,7 +14,7 @@
 #   2. 禁用镜像内 NVIDIA CUDA apt 仓库: 容器编译所需的 nvcc 已随 devel 镜像内置，
 #      本次依赖没有任何 cuda-* 包，该仓库保留只会拖慢/卡住国内 apt update
 #   3. CUDA 架构改为构建参数 CUDA_ARCH: 89=RTX 40 系(Ada) / 120a=RTX 50 系(Blackwell)
-#      （引擎 CMakeLists 硬校验只允许这两个值，一次编译只能选一个）
+#      （A3 树 device.h 已含 SM120 分支，两者均可编译；另有 NINFER_SM_COUNT 参数）
 # =============================================================================
 ARG CUDA_BASE=nvidia/cuda:13.3.0
 FROM ${CUDA_BASE}-devel-ubuntu24.04 AS build
@@ -23,6 +23,8 @@ ARG CUDA_ARCH=89
 ARG USE_MIRROR=1
 # 编译并行度：nvcc 单作业峰值 ~2GB 内存，20 核/30GB 机器建议 6（全并行会 OOM/ICE）
 ARG NINFER_JOBS=6
+# SM 数：0=按架构默认（89→128 / 120a→170）；4070 Ti(AD104) 传 60，其他卡按 nvidia-smi 实际值
+ARG NINFER_SM_COUNT=0
 
 RUN set -eux; \
     if [ "$USE_MIRROR" = "1" ]; then \
@@ -44,6 +46,7 @@ COPY src/ /src/
 RUN cmake -S . -B /build -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH} \
+        -DNINFER_SM_COUNT=${NINFER_SM_COUNT} \
         -DNINFER_BUILD_APPS=ON \
         -DBUILD_TESTING=OFF \
         -DNINFER_BUILD_BENCHMARKS=OFF \

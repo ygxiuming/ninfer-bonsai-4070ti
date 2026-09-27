@@ -49,15 +49,18 @@ case "$ACTION" in
         $DOCKER rm -f "$NAME" >/dev/null 2>&1 || true
         THINKING_FLAG=""
         if [[ "${NINFER_THINKING:-on}" == "off" ]]; then THINKING_FLAG="--no-thinking"; fi
+        # A3 数值安全：rows 钉 16（上游 sched3 auto 会走到 32 行档，PTQ1_0+32rows PPL 有缺陷）
+        ROWS_ENV="NINFER_TERNARY_SMALL_T_ROWS=16"
         echo ">> 启动容器: 镜像 $IMAGE | 上下文 $CTX | 宿主端口 $PORT"
         $DOCKER run -d --name "$NAME" --gpus all \
             -p "$PORT:8088" \
+            -e "$ROWS_ENV" \
             -v "$ART:/models/model.ninfer:ro" \
             "$IMAGE" \
             ninfer-serve /models/model.ninfer \
                 --host 0.0.0.0 --port 8088 --model-id qwen3.8-27b \
                 --max-context "$CTX" --kv-capacity "$CTX" --kv-dtype fp8 \
-                --spec mtp --draft-tokens 3 --no-prefix-reuse \
+                --spec mtp --draft-tokens 3 \
                 --max-concurrency 1 $THINKING_FLAG
         echo -n ">> 等待就绪"
         for _ in $(seq 1 120); do
