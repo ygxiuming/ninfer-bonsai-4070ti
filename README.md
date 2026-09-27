@@ -306,8 +306,9 @@ docker compose -f docker/docker-compose.yml up -d    # 或 compose 管理
 ./build/apps/ninfer-serve <你的制品>.ninfer \
   --host 127.0.0.1 --port 8088 --model-id qwen3.8-27b \
   --max-context 65536 --kv-capacity 65536 --kv-dtype fp8 \
-  --max-concurrency 1 --spec mtp --draft-tokens 3 \
-  --no-prefix-reuse        # ★ 必加！见下方踩坑表 #1
+  --max-concurrency 1 --spec mtp --draft-tokens 3
+# ↑ A3/r12 树无需 prefix-reuse 开关（账本 bug 已修复，踩坑表 #1）；
+#   若用 2026-09-26 旧树，须在参数里加回 --no-prefix-reuse
 ```
 
 **验证**：
