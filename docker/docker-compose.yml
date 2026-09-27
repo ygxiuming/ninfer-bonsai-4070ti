@@ -13,7 +13,7 @@ name: ninfer
 
 services:
   ninfer-serve:
-    # ---- 镜像（build-image.sh 的产物；50 系卡构建后改为 ...:cuda13.3-arch120a）----
+    # ---- 镜像（build-image.sh 的产物；vendor 源码当前仅支持 arch89/RTX 40 系）----
     image: ninfer-bonsai:cuda13.3-arch89
     container_name: ninfer-serve
     restart: unless-stopped        # 崩溃/开机自动拉起；不想自启改为 "no"

@@ -7,7 +7,7 @@
 
 - **适用硬件**：RTX 40 系（sm_89）。本文在 **RTX 4070 Ti 12GB** 实测；
   官方在 **RTX 4080 SUPER（32GB 魔改）** 验证过（262K 上下文 / decode 226 tok/s）。
-  RTX 50 系（sm_120a）用 `build-image.sh -a 120a` 构建。
+  RTX 50 系暂不支持：vendor 源码（Ada fork）的 device.h 仅认 SM86/89（见 Roadmap）。
 - **适用系统**：**Linux x64**（Ubuntu 26.04 实测；Windows 请直接用官方交付包的 exe）。
 - **最终形态**：OpenAI 兼容 HTTP 服务（`/v1/chat/completions`），支持思考模式。
 
@@ -383,8 +383,8 @@ A: 生产引擎二进制里没有三元量化支持（作者原话）。三元�
 这也是所有社区移植（CraneBW / zatfung / 本仓库）的共同基线。
 
 **Q: 4090 / 5090 呢？**
-A: 同 sm_89/120a 白名单内。5090 官方基线约为 4090 的 1.4-1.5×；40 系照抄本文参数即可，
-50 系构建镜像时用 `-a 120a`。
+A: 4090 同 sm_89，照抄本文参数即可。5090（sm_120a）官方基线约为 4090 的 1.4-1.5×，
+但本仓库 vendor 源码（Ada fork）暂编不了 120a，需上游 Neroued 树（见 Roadmap）。
 
 **Q: RTX 30 系 / 更老的卡能跑吗？**
 A: NInfer 引擎只支持 sm_89/120a，容器化也不改变这一点。老卡走官方"超低显存档"的
@@ -401,6 +401,8 @@ llama.cpp 线（SM 75~120a）。
 - [ ] decode 追平官方 226 t/s 口径（差在官方二进制未开源的 3KB 草稿策略，等新源码）
 - [ ] 262K 上下文（等上游 prefill 分页溢出实现；12GB 卡另有物理显存限制）
 - [ ] CI 镜像层缓存加速
+- [ ] RTX 50 系（sm_120a）镜像：vendor 的 device.h 当前仅认 SM86/89（CI 实测），
+      需交付树同步上游 device.h 或改用上游树构建
 
 ## 贡献（Contributing）
 

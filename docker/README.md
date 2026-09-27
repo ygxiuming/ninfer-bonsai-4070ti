@@ -20,7 +20,7 @@ CUDA 用户态库随镜像走，显卡驱动用宿主的（NVIDIA 容器运行�
 ./docker/run-ninfer.sh stop
 ```
 
-不在 docker 组时脚本自动改用 sudo；50 系卡构建: `./docker/build-image.sh -a 120a`（tag 后缀 arch120a）。
+不在 docker 组时脚本自动改用 sudo。`-a 120a` 参数保留但**当前 vendor 源码编不了**（见下注）。
 
 ## 方式 B：docker compose（参数全部可见可改）
 
@@ -84,17 +84,18 @@ vendor/ 里。**12GB 卡要小体积制品，走 ① 或 ④**（PQ2 的 7.8GB �
 | 显卡 | 支持 | 构建参数 |
 |---|---|---|
 | RTX 40 系（Ada: 4090/4080/4070/4060 及 L40/L4） | ✅ | `-a 89`（默认） |
-| RTX 50 系（Blackwell: 5090/5080/5070） | ✅ | `-a 120a` |
+| RTX 50 系（Blackwell: 5090/5080/5070） | ❌（本 vendor 树） | 见下注 |
 | RTX 30 系及更早 / AMD / Intel | ❌ | 引擎限制，与容器无关 |
 
+- **关于 RTX 50 系**：引擎上游（Neroued 树）支持 sm_120a，但本仓库 vendor 的 Ada fork
+  在 `src/core/device.h` 只认 SM86/89（CI 实测 120a 编译失败），需等交付树同步上游后开放。
 - 老卡（SM 75~86）走官方交付包**超低显存档**的 llama.cpp 线（SM 75~120a），不是本容器
 - 同代不同显存只影响档位: 12GB → work 64k / long 112k；更大显存 `run-ninfer.sh -c` 放大上下文
 
 ## 自动打包（GitHub Actions）
 
 `.github/workflows/docker-build.yml`：push 触达 `docker/` 或 `vendor/` 时，在 GitHub 云端
-自动完成"容器内编译 + 发镜像"（matrix 同时构建 arch89 / arch120a 两个变体），产物发布到
-GHCR。也就是说：克隆本仓库的人**可以跳过本地构建**，直接拉取现成镜像：
+自动完成"容器内编译 + 发镜像"（当前仅 arch89；120a 待源码支持），产物发布到 GHCR。也就是说：克隆本仓库的人**可以跳过本地构建**，直接拉取现成镜像：
 
 ```bash
 docker pull ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch89   # RTX 40 系

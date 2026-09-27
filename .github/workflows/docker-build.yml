@@ -2,9 +2,11 @@
 # 自动打包：push 触达 docker/ 或 vendor/ 时自动构建容器镜像并发布到 GHCR
 # （镜像 = vendor 源码容器内编译；无需任何本地构建环境）
 #
-# 产物（构建完成后可直接拉取，无需自己编译）：
-#   ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch89    RTX 40 系
-#   ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch120a  RTX 50 系
+# 产物：ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch89 （RTX 40 系）
+#
+# ⚠ 只构建 arch89：vendor（沈三殊 Ada fork）的 src/core/device.h 仅认
+#   NINFER_SM86/NINFER_SM89，120a（RTX 50 系）会编译失败——CMakeLists 放行 120a
+#   是上游遗留。50 系需上游 Neroued 树或交付树同步上游 device.h 后再加回 matrix。
 # =============================================================================
 name: docker-build
 
@@ -24,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        cuda_arch: ["89", "120a"]
+        cuda_arch: ["89"]   # 120a 待源码支持后加入（见文件头说明）
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +37,8 @@ jobs:
           df -h /
 
       - name: 构建镜像（容器内编译，CUDA_ARCH=${{ matrix.cuda_arch }}）
+        env:
+          NINFER_JOBS: "3"   # runner 4 核 16GB，比本机更保守，防 nvcc OOM/ICE
         run: ./docker/build-image.sh -a "${{ matrix.cuda_arch }}"
 
       - name: 登录 GHCR
