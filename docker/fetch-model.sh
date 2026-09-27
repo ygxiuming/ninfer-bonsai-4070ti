@@ -4,8 +4,9 @@
 #
 # 用法:
 #   ./docker/fetch-model.sh                # 校验 models/ 下的制品是否就绪
+#   ./docker/fetch-model.sh --ms           # ★推荐：从魔搭镜像仓库下载（7.8GB，国内直连）
 #   ./docker/fetch-model.sh <制品路径>     # 复制到 models/ 并校验
-#   ./docker/fetch-model.sh --hf           # 脚本化下载 HF 现成制品（20.4GB，见下）
+#   ./docker/fetch-model.sh --hf           # 下载 HF 现成制品（20.4GB，≥24GB 卡用，见下）
 #
 # 三种来源（详见 docker/README.md《模型制品》节）:
 #   ① PQ2 极速档交付（7.8GB，本机 12GB 卡唯一现成可用）—— 夸克网盘手动下载:
@@ -36,6 +37,13 @@ verify() {  # $1=文件 $2=期望sha256 $3=标签
 }
 
 case "${1:-verify}" in
+    --ms)
+        mkdir -p "$REPO_ROOT/models"
+        MS="uvx --from modelscope-hub modelscope"
+        echo ">> 从魔搭下载 xiuming/ninfer-bonsai-4070ti（7.8GB，国内直连）"
+        $MS download xiuming/ninfer-bonsai-4070ti models/artifacts-pq2.ninfer --local_dir "$REPO_ROOT"
+        verify "$DEST" "$SHA_PQ2" "PQ2 极速档（魔搭镜像）"
+        ;;
     --hf)
         mkdir -p "$REPO_ROOT/models"
         OUT="$REPO_ROOT/models/$HF_FILE"
@@ -54,10 +62,11 @@ case "${1:-verify}" in
         if [[ ! -f "$DEST" ]]; then
             echo "未找到模型制品: $DEST"
             echo "获取方式:"
-            echo "  ① 夸克网盘 PQ2（12GB 卡推荐）: https://pan.quark.cn/s/f72b85b82626 → 放入 models/"
-            echo "  ② 本机已有制品:               $0 <制品路径>"
-            echo "  ③ HF 现成制品（≥24GB 卡）:     $0 --hf"
-            echo "  ④ 自打包:                     见 docker/README.md《模型制品》节"
+            echo "  ① 魔搭镜像仓库（推荐）:       $0 --ms（或 modelscope download xiuming/ninfer-bonsai-4070ti models/artifacts-pq2.ninfer --local_dir .）"
+            echo "  ② 夸克网盘 PQ2:               https://pan.quark.cn/s/ef30066ed62a → 放入 models/"
+            echo "  ③ 本机已有制品:               $0 <制品路径>"
+            echo "  ④ HF 现成制品（≥24GB 卡）:     $0 --hf"
+            echo "  ⑤ 自打包:                     见 docker/README.md《模型制品》节"
             exit 1
         fi
         ACTUAL="$(sha256sum "$DEST" | cut -d' ' -f1)"

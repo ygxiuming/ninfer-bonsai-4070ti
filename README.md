@@ -125,7 +125,17 @@ sudo apt install -y build-essential libavformat-dev libavcodec-dev \
 
 ### 快速开始
 
-**三条路，按你的情况选**：
+### 获取本仓库（① 推荐魔搭，国内直连且自带 7.8GB 制品）
+
+```bash
+git clone https://www.modelscope.cn/xiuming/ninfer-bonsai-4070ti.git
+cd ninfer-bonsai-4070ti      # vendor/ 源码 + models/ 制品一次到位，全程无 GitHub
+# 只下制品也行：modelscope download xiuming/ninfer-bonsai-4070ti models/artifacts-pq2.ninfer --local_dir .
+```
+
+GitHub 仓库（内容一致）：https://github.com/ygxiuming/ninfer-bonsai-4070ti
+
+### 部署三条路，按你的情况选**：
 
 | | 容器化（本仓库自带源码） | 路径 A：官方交付包 | 路径 B：自打包 |
 |---|---|---|---|

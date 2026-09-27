@@ -65,10 +65,11 @@ long 114688 / fast 8192）、MTP K（draft-tokens，3 最优上限 5）、并发
 
 | 路线 | 下载量 | 谁来做 | 12GB 卡可用？ |
 |---|---|---|---|
-| ① PQ2 极速档交付 | 7.8GB（夸克手动） | 沈三殊字节级重打包 | ✅ 本机在用 |
-| ② HF 现成制品 `neroued/Qwen3.8-27B-NInfer` | 20.4GB（`fetch-model.sh --hf`，走 hf-mirror） | 原引擎作者 Neroued 直转发布 | ❌ 权重 20.4GB > 12GB 显存（≥24GB 卡用） |
-| ③ 自转·直转 | 底座 ~52GB（魔搭 Qwen/Qwen3.8-27B）+ DFlash2 3.6GB（z-lab） | 你自己：`vendor/ninfer-4090w-ternary/tools/convert/qwen3_8_27b`（依赖仅 safetensors） | ❌ 产出同为 20.4GB |
-| ④ 自转·GGUF | 三元 GGUF 6.7GB（魔搭 prism-ml）+ 底座 + 模板 | 你自己：`vendor/shensanshu-guide/tools/pack.py`（魔搭指南，已适配 Linux） | ✅ 产出 ~7-9GB |
+| ① **魔搭镜像仓库（推荐）** | 7.8GB（国内直连） | `fetch-model.sh --ms` 或 `modelscope download xiuming/ninfer-bonsai-4070ti models/artifacts-pq2.ninfer --local_dir .` | ✅ |
+| ② PQ2 极速档交付 | 7.8GB（夸克手动） | 沈三殊字节级重打包 | ✅ |
+| ③ HF 现成制品 `neroued/Qwen3.8-27B-NInfer` | 20.4GB（`fetch-model.sh --hf`，走 hf-mirror） | 原引擎作者 Neroued 直转发布 | ❌ 权重 20.4GB > 12GB 显存（≥24GB 卡用） |
+| ④ 自转·直转 | 底座 ~52GB（魔搭 Qwen/Qwen3.8-27B）+ DFlash2 3.6GB（z-lab） | 你自己：`vendor/ninfer-4090w-ternary-a3/tools/convert/qwen3_8_27b`（依赖仅 safetensors） | ❌ 产出同为 20.4GB |
+| ⑤ 自转·GGUF | 三元 GGUF 6.7GB（魔搭 prism-ml）+ 底座 + 模板 | 你自己：`vendor/shensanshu-guide/tools/pack.py`（魔搭指南，已适配 Linux） | ✅ 产出 ~7-9GB |
 
 **CraneBW 仓库是怎么做的**：它就是 Neroued 引擎线的公开 git——`tools/convert/qwen3_8_27b` 吃
 `Qwen/Qwen3.8-27B` + `z-lab/Qwen3.8-27B-DFlash2` 两个 checkpoint，一个命令转出完整 .ninfer
