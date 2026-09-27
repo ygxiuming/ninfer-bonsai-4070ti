@@ -18,6 +18,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENG="${NINFER_ENGINE:-$REPO_ROOT/vendor/ninfer-4090w-ternary-a3}"
 ARCH="89"
+BASE="nvidia/cuda:13.3.0"
 SM="0"          # NINFER_SM_COUNT；0=引擎按架构默认（89→128/120a→170）。4070 Ti 用 -s 60
 TAG=""
 MIRROR="1"
