@@ -14,6 +14,7 @@ CUDA 用户态库随镜像走，显卡驱动用宿主的（NVIDIA 容器运行�
 
 ```bash
 ./docker/build-image.sh            # 首次含基础镜像下载，见下表
+./docker/fetch-model.sh            # 校验/落位模型制品（models/，不随 git 分发）
 ./docker/run-ninfer.sh             # 或 -c 114688（long 档）/ -p 8088（自定端口）
 ./docker/test-serving.sh
 ./docker/run-ninfer.sh stop
@@ -56,6 +57,24 @@ long 114688 / fast 8192）、MTP K（draft-tokens，3 最优上限 5）、并发
 - 本镜像默认 **13.3.0** —— 对齐官方《兜底方案-从源码自己编译》依赖表与本机 549/549 实测编译链
 - 引擎树内官方 Dockerfile 原配 13.1.2，需要时切回: `./docker/build-image.sh -b nvidia/cuda:13.1.2`
 - KNOWN_ISSUES 里"CUDA 13.3 崩溃"是 **llama.cpp 线**（PrismML-Eng/llama.cpp #222）的问题，与 NInfer 引擎无关
+
+## 模型制品：.ninfer 的来路与获取（能不能自己打包？）
+
+`.ninfer` 是引擎容器格式（三元权重 + MTP 草稿头 + 元数据），由**转换器**从模型 checkpoint 生成
+——它不是编译产物：编译只产出引擎二进制（已烤进镜像），制品按需获取、只读挂载进容器。
+
+| 路线 | 下载量 | 谁来做 | 12GB 卡可用？ |
+|---|---|---|---|
+| ① PQ2 极速档交付 | 7.8GB（夸克手动） | 沈三殊字节级重打包 | ✅ 本机在用 |
+| ② HF 现成制品 `neroued/Qwen3.8-27B-NInfer` | 20.4GB（`fetch-model.sh --hf`，走 hf-mirror） | 原引擎作者 Neroued 直转发布 | ❌ 权重 20.4GB > 12GB 显存（≥24GB 卡用） |
+| ③ 自转·直转 | 底座 ~52GB（魔搭 Qwen/Qwen3.8-27B）+ DFlash2 3.6GB（z-lab） | 你自己：`vendor/ninfer-4090w-ternary/tools/convert/qwen3_8_27b`（依赖仅 safetensors） | ❌ 产出同为 20.4GB |
+| ④ 自转·GGUF | 三元 GGUF 6.7GB（魔搭 prism-ml）+ 底座 + 模板 | 你自己：`vendor/shensanshu-guide/tools/pack.py`（魔搭指南，已适配 Linux） | ✅ 产出 ~7-9GB |
+
+**CraneBW 仓库是怎么做的**：它就是 Neroued 引擎线的公开 git——`tools/convert/qwen3_8_27b` 吃
+`Qwen/Qwen3.8-27B` + `z-lab/Qwen3.8-27B-DFlash2` 两个 checkpoint，一个命令转出完整 .ninfer
+（配方与源 revision 记录在其 docs/maintainer/），成品发 HF 供"下载即用"；同一套转换器就在我们
+vendor/ 里。**12GB 卡要小体积制品，走 ① 或 ④**（PQ2 的 7.8GB 是沈三殊的字节级重打包优化，
+公开转换器做不出来）。
 
 ## 适配显卡范围（能否"适配任何显卡"？）
 
