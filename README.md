@@ -143,6 +143,8 @@ sudo apt install -y build-essential libavformat-dev libavcodec-dev \
 > Linux 侧本文用极速档内的 `src-tree` 编译（§5）；路径 B 的自打包工具链见 §6。
 > 指南与技术文档：[shensanshu/ninfer-ada-ternary](https://www.modelscope.cn/models/shensanshu/ninfer-ada-ternary)（魔搭）。
 
+> 🐳 **容器化部署（Docker）**：宿主机只需 NVIDIA 驱动（r580+）与 Docker，无需装 CUDA/FFmpeg 开发库——`docker/` 目录提供"容器内编译 + 国内源"一键脚本（基础镜像首次下载 ~4GB，架构参数 89=RTX 40 系 / 120a=RTX 50 系）。见 [docker/README.md](docker/README.md)。
+
 ---
 
 ## 5. 路径 A：官方交付包（推荐）
