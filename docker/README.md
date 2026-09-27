@@ -110,6 +110,19 @@ docker/Dockerfile，与本地 `build-image.sh` 完全同一套配方。
 文档/升级说明/已知问题/制品）创建 GitHub Release 并附自动提交清单。手动触发时
 填版本号输入框即可。
 
+**已发布成品（2026-09-27 验证）**：
+
+```bash
+docker pull ghcr.io/ygxiuming/ninfer-bonsai:cuda13.3-arch89   # RTX 40 系
+docker pull ghcr.io/ygxiuming/ninfer-bonsai:latest            # 跟随最新 Release
+docker pull ghcr.io/ygxiuming/ninfer-bonsai:v1.0.0            # 按版本
+./docker/run-ninfer.sh -i ghcr.io/ygxiuming/ninfer-bonsai:latest   # 拉完即起
+```
+
+GitHub Release：`v1.0.0`（谷歌风格模板 + 自动提交清单）。
+> ⚠ GHCR 包首次以 GITHUB_TOKEN 推送时默认**私有**：匿名拉取前请在 GitHub 网页
+> → Packages → ninfer-bonsai → Package settings → 改为 Public（一次性）。
+
 ## 与宿主机直跑的关系
 
 - 性能无差别（宿主驱动透传 + 容器内 CUDA 13.3 用户态库）

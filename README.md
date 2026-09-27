@@ -138,8 +138,11 @@ sudo apt install -y build-essential libavformat-dev libavcodec-dev \
 ./docker/test-serving.sh     # 冒烟：模型列表 + 一次真实生成
 ```
 
-> 也可拉取 GitHub Actions 自动打包的现成镜像（见 `docker/README.md`《自动打包》），
-> 跳过本地编译。容器参数逐项注释见 [docker/docker-compose.yml](docker/docker-compose.yml)；
+> **跳过本地编译**：CI 已自动构建并发布镜像，直接拉取——
+> `docker pull ghcr.io/ygxiuming/ninfer-bonsai:latest` 然后
+> `./docker/run-ninfer.sh -i ghcr.io/ygxiuming/ninfer-bonsai:latest`。
+> 首次需把 GHCR 包在网页上设为 Public（见 `docker/README.md`《自动打包》）。
+> 容器参数逐项注释见 [docker/docker-compose.yml](docker/docker-compose.yml)；
 > 制品的四种获取方式（含 12GB 卡与 ≥24GB 卡的差异）见
 > [docker/README.md](docker/README.md)《模型制品》节。
 
@@ -395,7 +398,7 @@ llama.cpp 线（SM 75~120a）。
 ## 路线图（Roadmap）
 
 - [x] 容器化部署（容器内编译 + 国内源 + GPU 架构参数化）
-- [x] 云端自动打包（GitHub Actions → GHCR，arch89/120a 双变体）
+- [x] 云端自动打包（GitHub Actions → GHCR）与 Release 自动发布（v* 标签→谷歌风格模板）
 - [ ] 官方 20 基准完整复测（对照 98.2% 保留口径，需从白皮书/eval 配置搭基准集）
 - [ ] 大海捞针真实矩阵复测（根因已定位：测试脚本没关思考；关思考后 8k/32k 矩阵待跑）
 - [ ] decode 追平官方 226 t/s 口径（差在官方二进制未开源的 3KB 草稿策略，等新源码）
@@ -434,6 +437,7 @@ Issue / PR 欢迎。改 `scripts/` 或 `docker/` 请先跑 `python3 scripts/benc
 - **宿主直跑线**：稳定——bench 8/8 回归、13 项性能全量通过（稳定 20/20）。
 - **容器线**：已验证——vendor 源码容器内编译出镜像，双入口冒烟 83.8 / 85.2 tok/s，
   与宿主直跑持平（2026-09-27）。
+- **发布**：`v1.0.0` 已发布（GitHub Release + GHCR 镜像 cuda13.3-arch89 / v1.0.0 / latest）。
 - **已知限制**：MTP 接受率与官方口径有差距（未开源的 3KB 草稿策略）；
   大海捞针测试脚本需关思考运行；12GB 卡上下文上限 112K。
 - 交付形态：OpenAI 兼容 HTTP 服务，compose 一键管理。
