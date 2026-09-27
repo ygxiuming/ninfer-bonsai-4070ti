@@ -1,0 +1,79 @@
+# =============================================================================
+# NInfer · Bonsai-2-27B —— docker-compose 配置（与 docker/run-ninfer.sh 二选一）
+#
+# 用法（在仓库根目录执行；不在 docker 组时前缀 sudo）:
+#   docker compose -f docker/docker-compose.yml up -d      # 启动
+#   docker compose -f docker/docker-compose.yml logs -f    # 跟随日志
+#   docker compose -f docker/docker-compose.yml ps         # 状态
+#   docker compose -f docker/docker-compose.yml down       # 停止并移除（显存随容器释放）
+#
+# ⚠ 与宿主机 start-ninfer.sh / docker/run-ninfer.sh 互斥：共用一张卡，先停对方再启动
+# =============================================================================
+name: ninfer
+
+services:
+  ninfer-serve:
+    # ---- 镜像（build-image.sh 的产物；50 系卡构建后改为 ...:cuda13.3-arch120a）----
+    image: ninfer-bonsai:cuda13.3-arch89
+    container_name: ninfer-serve
+    restart: unless-stopped        # 崩溃/开机自动拉起；不想自启改为 "no"
+    # ---- 端口映射：宿主端口:容器内端口（容器内 8088 固定，换宿主端口只改左边）----
+    ports:
+      - "8089:8088"                # 默认 8089 避让宿主 start-ninfer.sh 的 8088；与 ZCode 客户端对接改 "8088:8088"
+    # ---- 目录映射：宿主路径:容器内路径:读写权限（左侧改成你的实际路径）----
+    volumes:
+      # 模型制品 .ninfer（只读挂载，不进镜像；容器内路径对应下方 command 第一项）
+      - /home/xiuming/pyprojects/sanyuan/artifacts-pq2.ninfer:/models/model.ninfer:ro
+      # 需要日志落盘的话取消下一行注释（引擎日志走 stdout，docker compose logs 已可看）
+      # - /home/xiuming/ninfer-logs:/logs
+    # ---- GPU：整卡透传（显存预算与宿主直跑相同）----
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all           # 多卡指定某张卡：改成 1 或 "0,1"
+              capabilities: [gpu]
+    # ---- 启动命令：与 start-ninfer.sh work 档同款，每个参数一行注释，按需改 ----
+    command:
+      - ninfer-serve
+      # 制品路径：对应上方 volumes 右侧的容器内路径，不用改
+      - /models/model.ninfer
+      # 监听地址：容器内必须 0.0.0.0（否则端口映射不通）
+      - --host
+      - 0.0.0.0
+      # 容器内端口：与上方 ports 右侧保持一致
+      - --port
+      - 8088
+      # 对外模型名：OpenAI 客户端按此调用（ZCode 已按 qwen3.8-27b 配置）
+      - --model-id
+      - qwen3.8-27b
+      # ================= 上下文与显存（12GB 卡 fp8 实测档位）=================
+      # 最大上下文 token 数 —— 三档：work=65536 / long=114688 / fast=8192
+      #   12GB 卡 fp8 上限 ~112k（131k 差 370MB；262k 需 9.2GB 放不下）
+      #   显存更足的卡可以加大，但 kv-capacity 必须 ≥ 本值
+      - --max-context
+      - 65536
+      # KV 池 token 容量：与 max-context 同值即可（引擎硬检查 ≥ max-context）
+      - --kv-capacity
+      - 65536
+      # KV 缓存精度：fp8（默认，速度/显存平衡）；换其他值前先确认引擎支持
+      - --kv-dtype
+      - fp8
+      # ================= 投机解码（MTP 多 token 预测）=================
+      # 投机解码开关：mtp；去掉这两行 = 关投机（K=1 逐 token，最稳最慢）
+      - --spec
+      - mtp
+      # 每轮草稿 token 数 K：3 = 本机实测最优（76-84 t/s）；上限 5（内核硬限）
+      #   K 越大接受率越低；dflash/dflash2 需制品含 DFlash2 bundle（现制品没有）
+      - --draft-tokens
+      - 3
+      # ================= 已知问题规避 =================
+      # 必须保留：不加则第二个请求 500（上游 candidate token ledger bug，修复后可删）
+      - --no-prefix-reuse
+      # 并发路数：1 = 交互延迟优先（官方口径每加一路单路掉 ~28%，聚合吞吐线性）
+      - --max-concurrency
+      - 1
+      # ================= 思考模式 =================
+      # 思考默认开启；要整体关闭，把下面两行的行首 "# " 删掉即可
+      # - --no-thinking

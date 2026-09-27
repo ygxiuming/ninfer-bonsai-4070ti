@@ -21,6 +21,22 @@ CUDA 用户态库随镜像走，显卡驱动用宿主的（NVIDIA 容器运行�
 
 不在 docker 组时脚本自动改用 sudo；50 系卡构建: `./docker/build-image.sh -a 120a`（tag 后缀 arch120a）。
 
+## 方式 B：docker compose（参数全部可见可改）
+
+与 `run-ninfer.sh` 二选一（容器同名 `ninfer-serve`，不要同时用）：
+
+```bash
+docker compose -f docker/docker-compose.yml up -d      # 启动
+docker compose -f docker/docker-compose.yml logs -f    # 跟随日志
+docker compose -f docker/docker-compose.yml ps         # 状态
+docker compose -f docker/docker-compose.yml down       # 停止并移除
+```
+
+`docker-compose.yml` 里**每个启动参数都带一行中文注释**，手改即可：
+制品路径映射（volumes 左侧）、宿主端口（ports 左侧）、上下文档位（work 65536 /
+long 114688 / fast 8192）、MTP K（draft-tokens，3 最优上限 5）、并发路数、
+思考开关（删 `--no-thinking` 行首注释）、GPU 卡号（count）。
+
 ## 需要下载的镜像（构建前拉好）
 
 | 镜像 tag | 用途 | 压缩体积(amd64) |
