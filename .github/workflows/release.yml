@@ -1,0 +1,99 @@
+# =============================================================================
+# 自动发布 Release：推送 v* 标签（或手动填版本号触发）时自动执行：
+#   1. vendor 源码容器内编译 → 镜像（cuda13.3-arch89）
+#   2. 镜像推送 GHCR（版本号 + latest 双标签）
+#   3. 创建 GitHub Release，说明按谷歌开源风格模板：
+#      概述 Overview / 亮点 Highlights / 修复 Bug Fixes / 文档 Documentation /
+#      升级说明 Upgrade Notes / 已知问题 Known Issues / 制品 Artifacts
+# =============================================================================
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "版本号（如 v1.0.0）。留空=只做构建演练，不发布"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 释放磁盘空间（runner 预装组件约 25GB，CUDA 镜像需要）
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghc || true
+          sudo docker image prune -af || true
+          df -h /
+
+      - name: 构建镜像（容器内编译，CUDA_ARCH=89）
+        env:
+          NINFER_JOBS: "3"   # runner 4 核 16GB，防 nvcc OOM/ICE
+        run: ./docker/build-image.sh -a "89"
+
+      - name: 登录并推送 GHCR（版本 tag + latest）
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.version != ''
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          IMG="ghcr.io/${{ github.repository_owner }}/ninfer-bonsai"
+          VER="${{ github.event.inputs.version || github.ref_name }}"
+          docker tag "ninfer-bonsai:cuda13.3-arch89" "$IMG:$VER"
+          docker tag "ninfer-bonsai:cuda13.3-arch89" "$IMG:latest"
+          docker push "$IMG:$VER"
+          docker push "$IMG:latest"
+
+      - name: 创建 GitHub Release（谷歌开源风格模板）
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ github.event.inputs.version || github.ref_name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          DIGEST="$(docker image inspect --format='{{index .RepoDigests 0}}' "ghcr.io/${OWNER}/ninfer-bonsai:$VER" 2>/dev/null || echo '见 GHCR 包页面')"
+          cat > release-notes.md <<EOF
+          ## 概述 Overview
+
+          NInfer · Bonsai-2-27B 三元模型 RTX 4070 Ti 12GB Linux 部署套件 \`${VER}\`。
+          容器镜像已随本 Release 自动构建并发布（vendor 源码容器内编译，CUDA 13.3，sm_89）。
+
+          ## 亮点 Highlights
+
+          - 一键容器化：\`./docker/build-image.sh && ./docker/fetch-model.sh && ./docker/run-ninfer.sh\`
+          - OpenAI 兼容服务（compose 逐参数注释管理，端口 8089）
+          - 实测：持续解码 76~84 tok/s、prefill 1700+ tok/s、上下文 112K（12GB 卡）
+
+          ## 修复 Bug Fixes
+
+          - 见 [自动生成的提交清单](#)
+          （由 --generate-notes 追加在本模板之后）
+
+          ## 文档 Documentation
+
+          - README（谷歌开源模板九节）、docker/README（部署与《模型制品》获取路线）、docs/（性能实测、踩坑实录）
+
+          ## 升级说明 Upgrade Notes
+
+          \`\`\`bash
+          docker pull ghcr.io/${OWNER}/ninfer-bonsai:${VER}
+          ./docker/run-ninfer.sh -i ghcr.io/${OWNER}/ninfer-bonsai:${VER}
+          \`\`\`
+
+          ## 已知问题 Known Issues
+
+          - 仅支持 RTX 40 系（sm_89）：vendor 源码 device.h 暂不含 120a
+          - 服务端需 \`--no-prefix-reuse\`（上游 bug，脚本已内置）
+
+          ## 制品 Artifacts
+
+          - 容器镜像：\`ghcr.io/${OWNER}/ninfer-bonsai:${VER}\` 与 \`:latest\`（digest: \`${DIGEST}\`）
+          - 模型制品不随 Release 分发：见仓库 \`docker/fetch-model.sh\` 引导
+          EOF
+          gh release create "$VER" --title "NInfer Bonsai 部署套件 $VER" --notes-file release-notes.md --generate-notes

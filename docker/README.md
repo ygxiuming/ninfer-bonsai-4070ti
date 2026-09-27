@@ -105,6 +105,11 @@ docker pull ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch89   # RTX 40 系
 也可以在 Actions 页面手动触发（workflow_dispatch）。云端构建依赖 vendor/ 源码与
 docker/Dockerfile，与本地 `build-image.sh` 完全同一套配方。
 
+**Release 自动发布**（`.github/workflows/release.yml`）：推送 `v*` 标签时自动
+构建镜像 → 推 GHCR（版本号 + latest）→ 按谷歌开源风格模板（概述/亮点/修复/
+文档/升级说明/已知问题/制品）创建 GitHub Release 并附自动提交清单。手动触发时
+填版本号输入框即可。
+
 ## 与宿主机直跑的关系
 
 - 性能无差别（宿主驱动透传 + 容器内 CUDA 13.3 用户态库）
