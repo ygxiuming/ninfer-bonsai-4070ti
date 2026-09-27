@@ -1,7 +1,12 @@
 # NOTICE — 出处与第三方声明
 
-本仓库是**部署实录与教程**，不包含、不分发任何模型权重、引擎源码或第三方二进制。
-`scripts/` 下的脚本为本仓库原创（Apache-2.0）。所有被引用的组件归属原作：
+本仓库是**部署实录与教程**，不分发任何模型权重。`scripts/` 与 `docker/` 下的脚本为本仓库原创（Apache-2.0）。
+引擎源码与指南工具链以 Apache-2.0 **随仓库分发**于 `vendor/`（保留原 LICENSE/NOTICE 文件于其目录内）：
+
+- `vendor/ninfer-4090w-ternary/` —— 引擎源码树（源自官方交付包 src-tree，剔除了 Windows 专用 ffmpeg/ 二进制目录）
+- `vendor/shensanshu-guide/` —— 魔搭指南的工具链副本（pack.py / verify 套件 / changed-files 补丁）
+
+所有被引用的组件归属原作：
 
 ## 模型
 

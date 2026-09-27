@@ -1,0 +1,47 @@
+# =============================================================================
+# 自动打包：push 触达 docker/ 或 vendor/ 时自动构建容器镜像并发布到 GHCR
+# （镜像 = vendor 源码容器内编译；无需任何本地构建环境）
+#
+# 产物（构建完成后可直接拉取，无需自己编译）：
+#   ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch89    RTX 40 系
+#   ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch120a  RTX 50 系
+# =============================================================================
+name: docker-build
+
+on:
+  push:
+    branches: [main]
+    paths: ["docker/**", "vendor/**", ".github/workflows/docker-build.yml"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cuda_arch: ["89", "120a"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 释放磁盘空间（runner 预装组件约 25GB，CUDA 镜像需要）
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghc || true
+          sudo docker image prune -af || true
+          df -h /
+
+      - name: 构建镜像（容器内编译，CUDA_ARCH=${{ matrix.cuda_arch }}）
+        run: ./docker/build-image.sh -a "${{ matrix.cuda_arch }}"
+
+      - name: 登录 GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: 推送 GHCR
+        run: |
+          IMG="ghcr.io/${{ github.repository_owner }}/ninfer-bonsai"
+          docker tag "ninfer-bonsai:cuda13.3-arch${{ matrix.cuda_arch }}" "$IMG:cuda13.3-arch${{ matrix.cuda_arch }}"
+          docker push "$IMG:cuda13.3-arch${{ matrix.cuda_arch }}"

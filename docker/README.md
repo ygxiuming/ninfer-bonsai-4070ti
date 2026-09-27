@@ -90,6 +90,20 @@ vendor/ 里。**12GB 卡要小体积制品，走 ① 或 ④**（PQ2 的 7.8GB �
 - 老卡（SM 75~86）走官方交付包**超低显存档**的 llama.cpp 线（SM 75~120a），不是本容器
 - 同代不同显存只影响档位: 12GB → work 64k / long 112k；更大显存 `run-ninfer.sh -c` 放大上下文
 
+## 自动打包（GitHub Actions）
+
+`.github/workflows/docker-build.yml`：push 触达 `docker/` 或 `vendor/` 时，在 GitHub 云端
+自动完成"容器内编译 + 发镜像"（matrix 同时构建 arch89 / arch120a 两个变体），产物发布到
+GHCR。也就是说：克隆本仓库的人**可以跳过本地构建**，直接拉取现成镜像：
+
+```bash
+docker pull ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch89   # RTX 40 系
+# 拉取后照常: ./docker/run-ninfer.sh -i ghcr.io/<owner>/ninfer-bonsai:cuda13.3-arch89
+```
+
+也可以在 Actions 页面手动触发（workflow_dispatch）。云端构建依赖 vendor/ 源码与
+docker/Dockerfile，与本地 `build-image.sh` 完全同一套配方。
+
 ## 与宿主机直跑的关系
 
 - 性能无差别（宿主驱动透传 + 容器内 CUDA 13.3 用户态库）
