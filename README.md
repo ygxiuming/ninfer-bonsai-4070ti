@@ -132,8 +132,16 @@ sudo apt install -y build-essential libavformat-dev libavcodec-dev \
 | 耗时 | ~30 分钟（含编译） | ~半天（含 50GB 下载） |
 
 > 两条路径的**编译与运行完全一致**（§5.2 / §7），只有"源码与制品从哪来"不同。
-> 交付包向作者获取渠道见 [官方魔搭仓库](https://www.modelscope.cn/models/shensanshu/ninfer-ada-ternary)
-> 与其 issue 区；本文作者通过作者交付的离线包完成路径 A，并全程验证了路径 B。
+> 官方交付包（**Windows 版，含全部依赖与制品，开箱即跑**）作者网盘直链：
+>
+> | 档位 | 内容 | 链接 |
+> |---|---|---|
+> | 极速档（PQ2 / ninfer 线） | 7.74 GB 制品 + Windows 引擎 + 源码树 | https://pan.quark.cn/s/f72b85b82626 |
+> | 均衡档（PTQ1 / ninfer 线） | 7.05 GB 制品（权重省 1.18 GiB，prefill −10%） | https://pan.quark.cn/s/0a799654ba7e |
+> | 超低显存档（llama.cpp + KVMem 线） | llama 线源码与制品，SM 75~120a | https://pan.quark.cn/s/fd20cf86d3ca |
+>
+> Linux 侧本文用极速档内的 `src-tree` 编译（§5）；路径 B 的自打包工具链见 §6。
+> 指南与技术文档：[shensanshu/ninfer-ada-ternary](https://www.modelscope.cn/models/shensanshu/ninfer-ada-ternary)（魔搭）。
 
 ---
 
@@ -350,7 +358,9 @@ python3 scripts/suite_ninfer.py         # 深度套件：K 矩阵/投机一致�
 **Q: 和 llama.cpp 跑 GGUF 比有什么区别？**
 A: 本线是 CUDA 原生内核（GEMV/mma 双路径 + MTP 投机解码 + CUDA Graph），官方口径
 4080S 上 decode 226 t/s；三元 GGUF 需要 PrismML 特供的 llama.cpp fork，且没有官方
-Linux 预编译。两条线制品不通用（.ninfer vs .gguf）。
+Linux 预编译。两条线制品不通用（.ninfer vs .gguf）。作者另发"超低显存档"
+（llama.cpp + KVMem 三元线，显存下限更低、上下文更长）：
+https://pan.quark.cn/s/fd20cf86d3ca ——那是另一条引擎线，与本文不通用。
 
 **Q: 能开多路并发吗？**
 A: 引擎支持，但官方口径单路优先（每加一路单路掉 ~28%，聚合吞吐仍涨：本机 4 路聚合 336 t/s）。
