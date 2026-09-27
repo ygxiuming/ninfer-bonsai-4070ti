@@ -221,6 +221,12 @@ python3 tools/pack.py build <models>/Ternary-Bonsai-2-27B.ninfer \
 
 判据：`check` 全绿（zero_share=0.3278 与理论精确一致）；制品文本部分 **6.696 GiB**（红线内）。
 
+> **辅助工具**（本仓库 `extras/`，自包含零依赖）：
+> `dump_gguf_meta.py` —— 校验 GGUF 元数据四项判据并导出 `prism.*` JSON
+>（供 `check_signs.py` 使用）；`gguf_meta.py` + `_ternary_ref.py` ——
+> 指南 verify 快照缺失的 `_ternary_ref` 模块的自包含实现
+>（拷进 `tools/verify/` 与 check_*.py 同目录即可，无需 pack.py / 引擎源码树）。
+
 ### 6.5 验证（四个脚本，缺一不可）
 
 ```bash
@@ -279,7 +285,8 @@ curl -s http://127.0.0.1:8088/v1/chat/completions \
 
 - **请求体必须带 `model` 字段**（与 llama.cpp 不同，缺了会被拒）；
 - 思考模式默认开启（模板决定），请求级开关：`"enable_thinking": true/false`、
-  `"reasoning_effort": "low/medium/xhigh"`（本仓库引擎已打补丁：`high/max` 自动映射到 xhigh）；
+  `"reasoning_effort": "low/medium/xhigh"`（OpenAI 系客户端默认发的 `high/max`
+  会被 `patches/apply-compat.sh` 的别名补丁自动映射到 xhigh——源码树打一次即可）；
 - 回归测试：`python3 scripts/bench_ninfer.py`（8 项，含生成的代码实际执行验证）。
 
 ---
@@ -323,7 +330,7 @@ python3 scripts/suite_ninfer.py         # 深度套件：K 矩阵/投机一致�
 | # | 症状 | 真因 / 处方 |
 |---|---|---|
 | 1 | 第二个请求 HTTP 500，`candidate token ledger does not match prompt length` | **前缀复用与草稿账本冲突（上游 bug）** ⇒ 服务端必加 `--no-prefix-reuse` |
-| 2 | 400 `reasoning effort 'high' is not supported` | 模板只认 low/medium/xhigh ⇒ 本仓库引擎已打别名补丁（high/max→xhigh）；或客户端改发 medium |
+| 2 | 400 `reasoning effort 'high' is not supported` | 模板只认 low/medium/xhigh ⇒ `patches/apply-compat.sh`（P1 别名补丁：high/max→xhigh）；或客户端改发 medium |
 | 3 | 转换时 CUDA OOM（Tried to allocate 4.74 GiB） | 12GB 卡跑不下 GPU 量化 ⇒ `--device cpu`（实测仅 131s） |
 | 4 | 转换中途被 OOM-kill | 32GB 内存不够 ⇒ 64GB swap |
 | 5 | nvcc 并发编译 GCC 段错误 | TMPDIR 在 tmpfs ⇒ `export TMPDIR=$PWD/tmp-nvcc` |
