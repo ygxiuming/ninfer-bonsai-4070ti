@@ -157,11 +157,19 @@ sudo apt install -y build-essential libavformat-dev libavcodec-dev \
 
 | 档位 | 内容 | 链接 |
 |---|---|---|
-| 极速档（PQ2 / ninfer 线） | 7.74 GB 制品 + Windows 引擎 + 源码树 | https://pan.quark.cn/s/f72b85b82626 |
-| 均衡档（PTQ1 / ninfer 线） | 7.05 GB 制品（权重省 1.18 GiB，prefill −10%） | https://pan.quark.cn/s/0a799654ba7e |
-| 超低显存档（llama.cpp + KVMem 线） | llama 线源码与制品，SM 75~120a | https://pan.quark.cn/s/fd20cf86d3ca |
+| 极速档（PQ2 / ninfer 线）·压缩包 | 7.74 GB 制品 + Windows 引擎 + 源码树 | https://pan.quark.cn/s/ef30066ed62a |
+| 极速档 · 文件夹 | 同上，文件夹视图 | https://pan.quark.cn/s/c57ab50cc616 |
+| 省显存档 | llama.cpp + KVMem 线，SM 75~120a | https://pan.quark.cn/s/ad41b0e4dd52 |
+| 均衡档（PTQ1 / ninfer 线） | 制品（权重省 1.18 GiB，decode −16%） | https://pan.quark.cn/s/0e62e85d30f7 |
+| 补丁包 | P1/P2/A3 官方补丁（r12 树用） | https://pan.quark.cn/s/f5906c26283f |
+| 文件哈希值 | 各档制品 SHA256 清单 | https://pan.quark.cn/s/d6789d82692e |
+
+> 直链为 2026-09-27 深夜更新版（A3 引擎世代）；旧链接失效以本表为准。
 
 指南与技术文档：[shensanshu/ninfer-ada-ternary](https://www.modelscope.cn/models/shensanshu/ninfer-ada-ternary)（魔搭）。
+
+**魔搭镜像仓库**：本仓库（含 `models/` 下 7.8GB 制品）可一键镜像到魔搭：
+`./scripts/upload-modelscope.sh <魔搭用户名>` —— 国内克隆/下载免 GitHub 直连。
 
 ### 路径 A：官方交付包
 
