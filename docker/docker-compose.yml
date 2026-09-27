@@ -23,9 +23,10 @@ services:
     # ---- 目录映射：宿主路径:容器内路径:读写权限（左侧改成你的实际路径）----
     volumes:
       # 模型制品 .ninfer（只读挂载，不进镜像；容器内路径对应下方 command 第一项）
-      - /home/xiuming/pyprojects/sanyuan/artifacts-pq2.ninfer:/models/model.ninfer:ro
+      # 相对路径相对本文件所在 docker/ 目录推导；可用环境变量 NINFER_ARTIFACT 覆盖或直接改绝对路径
+      - ${NINFER_ARTIFACT:-../models/artifacts-pq2.ninfer}:/models/model.ninfer:ro
       # 需要日志落盘的话取消下一行注释（引擎日志走 stdout，docker compose logs 已可看）
-      # - /home/xiuming/ninfer-logs:/logs
+      # - ../../ninfer-logs:/logs
     # ---- GPU：整卡透传（显存预算与宿主直跑相同）----
     deploy:
       resources:

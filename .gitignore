@@ -1,5 +1,6 @@
-# 制品与权重（体积大，且许可随上游——自行获取）
+# 制品与权重（体积大，且许可随上游——自行获取；models/ 由 docker/fetch-model.sh 引导落位）
 *.ninfer
+models/
 *.gguf
 *.safetensors
 

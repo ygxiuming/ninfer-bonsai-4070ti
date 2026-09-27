@@ -17,7 +17,9 @@
 # =============================================================================
 set -euo pipefail
 
-ART="$HOME/pyprojects/sanyuan/artifacts-pq2.ninfer"
+# 制品默认相对本仓库推导（../sanyuan/），可用环境变量 NINFER_ARTIFACT 或 -a 覆盖
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ART="${NINFER_ARTIFACT:-$REPO_ROOT/models/artifacts-pq2.ninfer}"
 CTX="65536"
 PORT="8089"
 IMAGE="ninfer-bonsai:cuda13.3-arch89"

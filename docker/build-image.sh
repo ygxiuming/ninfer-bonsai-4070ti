@@ -14,7 +14,9 @@
 # =============================================================================
 set -euo pipefail
 
-ENG="$HOME/pyprojects/sanyuan/ninfer-4090w-ternary"
+# 默认路径相对本仓库推导（../sanyuan/），可用环境变量 NINFER_ENGINE 或 -e 覆盖
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ENG="${NINFER_ENGINE:-$REPO_ROOT/vendor/ninfer-4090w-ternary}"
 ARCH="89"
 BASE="nvidia/cuda:13.3.0"
 TAG=""
@@ -50,6 +52,7 @@ echo ">> docker build（基础镜像 ${BASE}.x, CUDA_ARCH=$ARCH, 国内源=$MIRR
 $DOCKER build \
     --build-arg CUDA_BASE="$BASE" \
     --build-arg CUDA_ARCH="$ARCH" \
+    --build-arg NINFER_JOBS="${NINFER_JOBS:-6}" \
     --build-arg USE_MIRROR="$MIRROR" \
     -t "$TAG" \
     "$CTX"

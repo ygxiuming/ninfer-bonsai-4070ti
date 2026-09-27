@@ -21,6 +21,8 @@ FROM ${CUDA_BASE}-devel-ubuntu24.04 AS build
 
 ARG CUDA_ARCH=89
 ARG USE_MIRROR=1
+# 编译并行度：nvcc 单作业峰值 ~2GB 内存，20 核/30GB 机器建议 6（全并行会 OOM/ICE）
+ARG NINFER_JOBS=6
 
 RUN set -eux; \
     if [ "$USE_MIRROR" = "1" ]; then \
@@ -33,7 +35,7 @@ RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
         cmake libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev \
-        libswscale-dev ninja-build pkg-config; \
+        libswresample-dev libswscale-dev ninja-build pkg-config; \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
@@ -45,7 +47,7 @@ RUN cmake -S . -B /build -G Ninja \
         -DNINFER_BUILD_APPS=ON \
         -DBUILD_TESTING=OFF \
         -DNINFER_BUILD_BENCHMARKS=OFF \
-    && cmake --build /build --parallel --target ninfer ninfer-serve
+    && cmake --build /build --parallel "${NINFER_JOBS}" --target ninfer ninfer-serve
 
 FROM ${CUDA_BASE}-runtime-ubuntu24.04
 
