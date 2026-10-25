@@ -9,7 +9,7 @@
 #   ./start-kvmem.sh [profile] [port]       启动（默认 profile=work 端口=18202）
 #   ./start-kvmem.sh stop   [profile]       停止
 #   ./start-kvmem.sh status [profile]       状态
-#   ./start-kvmem.sh logs   [profile]       跟踪日志#
+#   ./start-kvmem.sh logs   [profile]       跟踪日志
 # profile（3060 12GB 实测）:
 #   work   默认。128K 逻辑上下文（KVMem 历史 KV 放主机内存，GPU 只驻留窗口），
 #          GPU 窗口 24K 检索 + 10K 生成预留，主 KV q8_0，思考开（预算 4096）。
@@ -24,16 +24,22 @@
 #   KVMEM_RESERVE=4096   缩小单轮生成预留 → 给提示让出约 6K 空间（输出上限同步降到 4096）
 #   KVMEM_BUDGET=32768   加大 GPU 检索窗口（多吃显存）
 #   KVMEM_VISION=0       关掉视觉（默认是开的；显存紧张/只跑纯文本时用）
+#   KVMEM_REASONING_BUDGET=4096  思考预算（默认 4096；与容器入口的同名变量对齐）
 # 例：KVMEM_CTX=262144 KVMEM_RESERVE=8192 ./scripts/start-kvmem.sh work
 #
 # 首次使用前先跑 scripts/build-kvmem-sm86.sh 准备引擎（免 root 工具链 + 编译）。
+#   KVROOT 默认 /mnt/D/code/kvmem-bonsai（引擎源码树 + 免 root CUDA 工具链所在），
+#   在别的机器上请用 KVROOT=/你的路径 或先跑 build-kvmem-sm86.sh 生成。
 #
 # 请求方式（OpenAI 兼容，与 ninfer 线一致；注意 30 系没有 FP8 张量核，
 # 该线用 q8_0 KV，不是 fp8）:
-#   curl -s http://127.0.0.1:18202/v1/models
-#   curl -s http://127.0.0.1:18202/v1/chat/completions -H 'Content-Type: application/json' \
+#   客户端接 18210（上下文压缩代理，默认随服务启动）：
+#     Base URL = http://127.0.0.1:18210/v1
+#   18202 是引擎直连（调试用，绕过压缩代理）：
+#   curl -s http://127.0.0.1:18210/v1/models
+#   curl -s http://127.0.0.1:18210/v1/chat/completions -H 'Content-Type: application/json' \
 #     -d '{"model":"bonsai","messages":[{"role":"user","content":"你好"}],"max_tokens":64}'
-#   Web UI: http://127.0.0.1:18202/
+#   Web UI: http://127.0.0.1:18202/（UI 由引擎提供，不走代理）
 # =============================================================================
 set -uo pipefail
 
@@ -159,7 +165,7 @@ ARGS=(-m "$MODEL" -ngl 99 --host 127.0.0.1 --port "$PORT"
       --kvmem-budget "$BUDGET" --kvmem-gen-reserve "$RESERVE" --kvmem-block-tokens 128
       --kv-dtype "$KV" "${SPEC_ARGS[@]}" --kvmem-mtp-state snapshots
       --kvmem-query-policy user --kvmem-query-replay auto --flash-attn on
-      --enable-thinking --reasoning-budget 4096)
+      --enable-thinking --reasoning-budget "${KVMEM_REASONING_BUDGET:-4096}")
 # Web UI 是可选件：源码树里的 ui/ 是 Svelte 源（需 Node 构建），
 # 预编译包里的 share/kvmem/ui 才是静态页；两者都没有时只提供 API。
 if [[ -r "$UI_DIR/index.html" ]]; then ARGS+=(--ui-dir "$UI_DIR"); fi
@@ -215,6 +221,7 @@ if [[ "${KVMEM_PROXY:-1}" != "0" && -r "$REPO/scripts/kvmem-proxy.py" ]]; then
         echo "压缩代理已在运行: http://127.0.0.1:$PROXY_PORT/v1"
     else
         KVMEM_PROXY_PORT="$PROXY_PORT" KVMEM_PROXY_UPSTREAM_PORT="$PORT" \
+        KVMEM_PROXY_LOGDIR="$LOGDIR" \
             nohup python3 "$REPO/scripts/kvmem-proxy.py" >>"$LOGDIR/kvmem-proxy.log" 2>&1 &
         echo $! > "$PROXY_PIDFILE"
         sleep 1

@@ -23,7 +23,8 @@
   KVMEM_PROXY_SUMMARY_MAX_TOKENS=1600 摘要生成上限
   KVMEM_PROXY_REBUILD_MIN=12000       滑出 keep 窗口的新消息攒到多少「估算 token」才重建摘要
                                       （攒够前沿用旧摘要、把滑出消息原样追加 → 前缀稳定、KV 缓存命中）
-日志：~/kvmem-logs/kvmem-proxy.log
+  KVMEM_PROXY_LOGDIR=~/kvmem-logs     日志与 pid 文件目录（start-kvmem.sh 会传自己的 $LOGDIR）
+日志：$KVMEM_PROXY_LOGDIR/kvmem-proxy.log
 """
 import hashlib
 import http.client
@@ -44,8 +45,12 @@ KEEP_EST_MAX = int(os.environ.get("KVMEM_PROXY_KEEP_EST_MAX", "15000"))
 SUMMARY_MAX_TOKENS = int(os.environ.get("KVMEM_PROXY_SUMMARY_MAX_TOKENS", "1600"))
 REBUILD_MIN = int(os.environ.get("KVMEM_PROXY_REBUILD_MIN", "12000"))
 UP_TIMEOUT = 1800          # 上游整请求上限（预填充最长的情况）
+# 日志与 pid 的落盘目录：默认 ~/kvmem-logs，可用 KVMEM_PROXY_LOGDIR 覆盖
+# （start-kvmem.sh 会把它的 $LOGDIR 传进来，避免用户自定义 LOGDIR 后两边日志分家）
+LOG_DIR = os.environ.get("KVMEM_PROXY_LOGDIR") or os.path.expanduser("~/kvmem-logs")
 STATE_PATH = os.path.expanduser("~/.cache/kvmem-proxy-state.json")
-LOG_PATH = os.path.expanduser("~/kvmem-logs/kvmem-proxy.log")
+LOG_PATH = os.path.join(LOG_DIR, "kvmem-proxy.log")
+PID_PATH = os.path.join(LOG_DIR, "kvmem-proxy.pid")
 
 _LOG_LOCK = threading.Lock()
 
@@ -361,8 +366,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-    with open(os.path.expanduser("~/kvmem-logs/kvmem-proxy.pid"), "w") as f:
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(PID_PATH, "w") as f:
         f.write(str(os.getpid()))
     log(f"kvmem-proxy 启动 :{PORT} → upstream :{UP_PORT} | 阈值 {THRESHOLD} tok | "
         f"保留最近 {KEEP_RECENT} 条(≤{KEEP_EST_MAX} tok) | 攒 {REBUILD_MIN} est 才重建摘要")

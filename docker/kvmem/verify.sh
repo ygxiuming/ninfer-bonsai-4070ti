@@ -22,7 +22,14 @@ EP=18399   # 宿主侧映射：引擎
 PP=18398   # 宿主侧映射：压缩代理
 NAME="kvmem-verify-$$"
 fail=0
-say() { printf "  %-52s %s\n" "$1" "$2"; }
+# 对齐按「显示列宽」算，不能按字节：中文字符是 2 列、UTF-8 下占 3 字节，
+# `%-52s` 会把它当 3 列宽来补空格，整列越往右越歪。wc -L 是唯一按 wcwidth 算宽度的。
+say() {
+    local w pad
+    w=$(printf '%s' "$1" | wc -L 2>/dev/null || echo 52)
+    pad=$(( 52 > w ? 52 - w : 1 ))
+    printf "  %s%*s %s\n" "$1" "$pad" "" "$2"
+}
 cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
@@ -43,7 +50,7 @@ else
 fi
 
 # 3) 缺模型时报错清晰
-out="$(docker run --rm --gpus all --entrypoint sh -v /tmp:/models:ro "$IMG" -c 'exit 0' 2>&1; docker run --rm --gpus all -e KVMEM_MODEL=/nope.gguf "$IMG" 2>&1 || true)"
+out="$(docker run --rm --gpus all -e KVMEM_MODEL=/nope.gguf "$IMG" 2>&1 || true)"
 grep -q "缺模型" <<<"$out" && say "③ 缺模型时给出明确提示" "✓" || { say "③ 缺模型时给出明确提示" "✗"; fail=1; }
 
 if [[ ! -r "$MODELS/Ternary-Bonsai-2-27B-PTQ1_0.gguf" ]]; then

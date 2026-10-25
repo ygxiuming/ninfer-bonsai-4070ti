@@ -95,4 +95,5 @@ ninja -C build -j"${NPROC:-6}" llama-kvmem-server llama-kvmem-cli
 
 echo
 echo "完成。产物: $KVROOT/kvmem-src/build/bin/llama-kvmem-server"
-echo "启动:      $KVROOT/../ninfer-bonsai-4070ti/scripts/start-kvmem.sh   （或本仓库 scripts/start-kvmem.sh）"
+echo "启动:      KVROOT=$KVROOT ./scripts/start-kvmem.sh work"
+echo "           （在本仓库根目录执行；KVROOT 与上面一致，start-kvmem.sh 才找得到引擎）"

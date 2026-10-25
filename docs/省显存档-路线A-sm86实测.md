@@ -110,9 +110,14 @@ ninja -C build -j6 llama-kvmem-server llama-kvmem-cli
 ```
 
 - `-j6` 不是保守，是**内存纪律**：nvcc 单作业峰值 1.5~3 GB，30 GB 内存机器上 `-j12` 会触顶
-  （官方 Windows 侧就出过 `-j24` 打爆内存导致内核崩溃的事故，见 `汇总-报告…/死机诊断与安全续跑.md`）。
+  （官方 Windows 侧就出过 `-j24` 打爆内存导致内核崩溃的事故）。
 - `cmake` 配置输出里出现 `Found CUDAToolkit: ... 13.2.86` 与
   `CMAKE_CUDA_ARCHITECTURES=86-real` 即正确。
+- ⚠️ **路径要对上**：上面是「看懂每一步」的手写流程，产物在 `./kvmem-llama.cpp/build/bin/`。
+  而 `scripts/start-kvmem.sh` 找的是 **`$KVROOT/kvmem-src/build/bin/llama-kvmem-server`**
+  （`KVROOT` 默认 `/mnt/D/code/kvmem-bonsai`）。想直接用启动脚本，就按
+  `scripts/build-kvmem-sm86.sh` 的布局来（它克隆到 `$KVROOT/kvmem-src`），
+  或者启动时 `KVROOT=` 指到你自己的树、并保证目录名是 `kvmem-src`。
 
 ---
 
@@ -163,7 +168,7 @@ PYTHONPATH=$PWD/pylibs python3 scripts/bonsai-mtp-graft.py \
 
 | 客户端里填 | 值 |
 |---|---|
-| Base URL | `http://127.0.0.1:18202/v1` |
+| Base URL | **`http://127.0.0.1:18210/v1`**（走上下文压缩代理；`18202` 是引擎直连，仅调试用） |
 | API Key | 任意（服务端不校验，如 `ssss`） |
 | 模型名 | 任意（如 `bonsai`）——服务端忽略该字段 |
 
@@ -199,8 +204,8 @@ Jinja Exception: Unexpected reasoning effort high. Supported types are xhigh (de
 
 ## 6. 与 ninfer 线（报告里的"路线 B"）怎么选
 
-同一张 3060 12GB 上，两条线是**速度 vs 上下文**的取舍（ninfer 数据引自
-`汇总-报告与技能/报告/调优报告2-DFlash2路线-104tps.md`，本仓库未复测）：
+同一张 3060 12GB 上，两条线是**速度 vs 上下文**的取舍（路线 B 数据引自作者本机的
+ninfer 调优报告，本仓库未复测；路线 B 的部署见根 README 的 ninfer 章节）：
 
 | | 路线 A：本页（llama.cpp + KVMem） | 路线 B：自编 ninfer sm_86 |
 |---|---|---|
@@ -397,10 +402,10 @@ KVMEM_PROXY=0 ./scripts/start-kvmem.sh long   # 只要引擎
 curl -L --noproxy '*' -o models/Ternary-Bonsai-2-27B-PTQ1_0.gguf \
   https://hf-mirror.com/prism-ml/Ternary-Bonsai-2-27B-gguf/resolve/main/Ternary-Bonsai-2-27B-PTQ1_0.gguf
 
-# 3) 起服务（128K）
-./scripts/start-kvmem.sh work                       # → http://127.0.0.1:18202
+# 3) 起服务（128K）：引擎 18202，压缩代理 18210（客户端接 18210）
+./scripts/start-kvmem.sh work
 
-# 4) 冒烟
+# 4) 冒烟（引擎直连；想连整条链路就把端口换成 18210）
 curl -s --noproxy '*' http://127.0.0.1:18202/v1/chat/completions -H 'Content-Type: application/json' \
   -d '{"messages":[{"role":"user","content":"用一句话中文自我介绍。"}],"max_tokens":64,"temperature":0}'
 

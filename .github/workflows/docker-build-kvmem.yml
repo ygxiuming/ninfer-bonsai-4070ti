@@ -27,13 +27,24 @@ permissions:
   contents: read
   packages: write
 
+# 同一分支连续 push 时取消上一次：单次构建约 35 分钟，排队没意义，
+# 且后一次构建的产物必然覆盖前一次。
+concurrency:
+  group: docker-build-kvmem-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-86:
-    runs-on: ubuntu-latest
+    # 固定 24.04 而不是 ubuntu-latest：GitHub 已开始把 latest 迁到 Ubuntu 26
+    # （runner-images#14748，2026-10-19 起）。CUDA devel 基础镜像与下面
+    # `sudo rm -rf` 的预装路径都按 24.04 的布局写的，跟着 latest 漂会随机失败。
+    runs-on: ubuntu-24.04
+    # 默认 360 分钟。构建 35 分钟足够，卡在 apt/克隆时不该烧满 6 小时额度。
+    timeout-minutes: 90
     env:
       KVMEM_JOBS: "3"   # runner 4 核 16GB：nvcc 单作业峰值 ~2GB，保守取值防 OOM/ICE
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: 释放磁盘空间（CUDA devel 镜像 + 编译产物需要）
         run: |

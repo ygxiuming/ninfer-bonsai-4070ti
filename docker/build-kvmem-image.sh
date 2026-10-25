@@ -55,13 +55,30 @@ DOCKER="docker"; docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 #   上下文根/patches/bonsai-chat-template-alias.jinja
 CTX="$(mktemp -d /tmp/kvmem-docker-ctx.XXXXXX)"
 trap 'rm -rf "$CTX"' EXIT
-mkdir -p "$CTX/docker/kvmem" "$CTX/scripts" "$CTX/patches"
-cp "$ROOT/docker/kvmem/Dockerfile" "$CTX/Dockerfile"
-cp "$ROOT/docker/kvmem/docker-entrypoint.sh" "$CTX/docker/kvmem/"
-cp "$ROOT/scripts/kvmem-proxy.py" "$CTX/scripts/"
-cp "$ROOT/patches/bonsai-chat-template-alias.jinja" "$CTX/patches/"
 
-# 构建前自检：Dockerfile 必须在上下文根，且它 COPY 的每个文件都要在
+# 仓库路径:上下文内路径 —— 与 Dockerfile 的每条 COPY 一一对应
+CTX_FILES=(
+    "docker/kvmem/Dockerfile:Dockerfile"
+    "docker/kvmem/docker-entrypoint.sh:docker/kvmem/docker-entrypoint.sh"
+    "scripts/kvmem-proxy.py:scripts/kvmem-proxy.py"
+    "patches/bonsai-chat-template-alias.jinja:patches/bonsai-chat-template-alias.jinja"
+)
+
+# 先自检**再**复制：缺文件时给出可读的报错，而不是让 cp 在 `set -e` 下直接秒退。
+# （踩过：PR #1 漏了 patches/bonsai-chat-template-alias.jinja，CI 日志只有一行
+#   `cp: cannot stat ...`，下面那段"构建上下文不完整"的友好提示根本没机会执行）
+missing=0
+for pair in "${CTX_FILES[@]}"; do
+    [[ -f "$ROOT/${pair%%:*}" ]] || { echo "   [缺] 仓库里没有 ${pair%%:*}" >&2; missing=1; }
+done
+[[ "$missing" == "0" ]] || { echo "错误: 构建所需的文件在仓库里缺失，已中止（见上面 [缺] 行）" >&2; exit 1; }
+
+mkdir -p "$CTX/docker/kvmem" "$CTX/scripts" "$CTX/patches"
+for pair in "${CTX_FILES[@]}"; do
+    cp "$ROOT/${pair%%:*}" "$CTX/${pair##*:}"
+done
+
+# 复制后再确认一遍（防止 cp 静默失败）：Dockerfile 必须在上下文根，且它 COPY 的每个文件都要在
 missing=0
 for f in "Dockerfile" "docker/kvmem/docker-entrypoint.sh" "scripts/kvmem-proxy.py" "patches/bonsai-chat-template-alias.jinja"; do
     if [[ -f "$CTX/$f" ]]; then

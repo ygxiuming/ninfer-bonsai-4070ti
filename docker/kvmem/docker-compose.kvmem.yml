@@ -11,7 +11,7 @@
 # 用哪张镜像：
 #   · 本机构建（默认）        → 不用设置，用下面的默认标签
 #   · 从 GHCR 拉取的（CI 产物）→ 在本文件同目录放一个 .env，写一行：
-#         KVMEM_IMAGE=ghcr.io/wblacksnoww/llama-kvmem-bonsai:cuda13.3-arch86
+#         KVMEM_IMAGE=ghcr.io/<owner>/llama-kvmem-bonsai:cuda13.3-arch86
 #     （compose 会自动读同目录 .env；VS Code 的 Compose Up 同样生效）
 #
 # 客户端接 http://127.0.0.1:18210/v1 （压缩代理；18202 是引擎直连，一般不用）

@@ -559,7 +559,7 @@ tail -3 "$(ls -t ~/kvmem-logs/kvmem-*.log | head -1)"   # 自动挑最近在写�
 
 | 方式 | 怎么做 | 要编译吗 |
 |---|---|---|
-| ① **直接从 CI 拉编好的镜像**（推荐；别的机器零依赖） | `docker pull ghcr.io/wblacksnoww/llama-kvmem-bonsai:cuda13.3-arch86`<br>（包默认私有：先 `docker login ghcr.io`，或网页把它设为 Public） | ❌ **不用** |
+| ① **直接从 CI 拉编好的镜像**（推荐；别的机器零依赖） | `docker pull ghcr.io/<owner>/llama-kvmem-bonsai:cuda13.3-arch86`<br>（`<owner>` = 该镜像的构建仓库所有者，本仓库即 `ygxiuming`；包默认私有：先 `docker login ghcr.io`，或网页把它设为 Public） | ❌ **不用** |
 | ② 本机自建 | `./docker/build-kvmem-image.sh`（约 15 分钟） | ✅ |
 
 两种方式都还需要三样**镜像里没有**的东西：**模型**（放进 `models/`，镜像不含权重）、

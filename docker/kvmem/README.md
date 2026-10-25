@@ -14,7 +14,7 @@
 ## 1. 拿到镜像：两条路（**先选这条**）
 
 > **① 直接用 CI 构建好的镜像 —— 不构建，推荐给其他机器**（跳到下面的
-> 「不自己构建：直接用 CI 构建好的镜像（GHCR）」：`docker pull ghcr.io/wblacksnoww/llama-kvmem-bonsai:cuda13.3-arch86`）
+> 「不自己构建：直接用 CI 构建好的镜像（GHCR）」：`docker pull ghcr.io/<owner>/llama-kvmem-bonsai:cuda13.3-arch86`）
 >
 > **② 自己构建 —— 只在两种情况下需要**：
 > - 你要**改引擎源码**（vendor 树里的东西）
@@ -47,24 +47,28 @@
 推送到 `main` 且改动命中 `docker/kvmem/**` 等路径时，CI 会自动构建并推送：
 
 ```
-ghcr.io/wblacksnoww/llama-kvmem-bonsai:cuda13.3-arch86   ← RTX 30 系（sm_86）
-ghcr.io/wblacksnoww/llama-kvmem-bonsai:latest
+ghcr.io/<owner>/llama-kvmem-bonsai:cuda13.3-arch86   ← RTX 30 系（sm_86）
+ghcr.io/<owner>/llama-kvmem-bonsai:latest
 ```
+
+> `<owner>` = **构建那次 CI 的仓库所有者**（workflow 里是 `${{ github.repository_owner }}`）。
+> 所以：本仓库（`ygxiuming/ninfer-bonsai-4070ti`）发布在 `ghcr.io/ygxiuming/llama-kvmem-bonsai`；
+> 如果你是从自己的 fork 上构建的，就把 `<owner>` 换成你自己的用户名。
 
 ```bash
 # ① 让 daemon 能拉私有包（任选其一）
 #    a) 建一个 classic PAT 勾上 read:packages，然后登录：
-echo "<你的PAT>" | docker login ghcr.io -u wblacksnoww --password-stdin
+echo "<你的PAT>" | docker login ghcr.io -u "<owner>" --password-stdin
 #    b) 或在 GitHub 网页把该包设为 Public：Package settings → Change visibility
 
 # ② 拉取
-docker pull ghcr.io/wblacksnoww/llama-kvmem-bonsai:cuda13.3-arch86
+docker pull ghcr.io/<owner>/llama-kvmem-bonsai:cuda13.3-arch86
 
 # ③ 起服务（模型只读挂载；端口与宿主脚本一致）
 docker run -d --name kvmem-3060 --gpus all --restart unless-stopped \
   -p 127.0.0.1:18210:18210 -p 127.0.0.1:18202:18202 \
   -v "$PWD/models:/models:ro" \
-  ghcr.io/wblacksnoww/llama-kvmem-bonsai:cuda13.3-arch86
+  ghcr.io/<owner>/llama-kvmem-bonsai:cuda13.3-arch86
 # 或把 docker-compose.kvmem.yml 里的 image: 换成上面的 GHCR 地址，再 compose up -d
 ```
 
@@ -72,7 +76,7 @@ docker run -d --name kvmem-3060 --gpus all --restart unless-stopped \
 > 在 `docker/kvmem/` 下放一个 `.env`，写一行即可（compose 会自动读同目录 `.env`，已验证）：
 >
 > ```
-> KVMEM_IMAGE=ghcr.io/wblacksnoww/llama-kvmem-bonsai:cuda13.3-arch86
+> KVMEM_IMAGE=ghcr.io/<owner>/llama-kvmem-bonsai:cuda13.3-arch86
 > ```
 >
 > 不写就默认用本机构建出来的 `llama-kvmem-bonsai:cuda13.3-arch86` ✓。
